@@ -9,9 +9,11 @@ class MultilayerPerceptron:
         self.layers = []
         self.learning_rate = learning_rate
 
-        self.layers.append(Layer(q[0], self.p))
         for i in range(len(q)):
-            self.layers.append(Layer(q[i], q[i-1] if i > 0 else q[0]))
+            if i == 0:
+                self.layers.append(Layer(q[i], p))
+            else:
+                self.layers.append(Layer(q[i], q[i-1]))
         self.layers.append(Layer(m, q[-1]))
 
     def forward(self, x):
@@ -20,7 +22,7 @@ class MultilayerPerceptron:
             output = layer.forward(output)
         return output
 
-    def backward(self, x, d, update=True):
+    def backward(self, x, d, update=True, learning_rate=None):
         """
         Perform the backward pass (backpropagation) to compute gradients.
 
@@ -37,7 +39,7 @@ class MultilayerPerceptron:
                 y_bias = np.vstack((-np.ones((1, 1)), self.layers[j - 1].output))
                 grad = self.layers[j].delta @ y_bias.T
                 if update:
-                    self.layers[j].w += self.learning_rate * grad
+                    self.layers[j].w += learning_rate * grad
                 # Optionally, store the gradient for checking:
                 self.layers[j].grad = grad
 
@@ -47,7 +49,7 @@ class MultilayerPerceptron:
                 x_bias = np.vstack((-np.ones((1, 1)), x))
                 grad = self.layers[j].delta @ x_bias.T
                 if update:
-                    self.layers[j].w += self.learning_rate * grad
+                    self.layers[j].w += learning_rate * grad
                 self.layers[j].grad = grad
 
             else:  # Hidden layers
@@ -56,12 +58,12 @@ class MultilayerPerceptron:
                 y_bias = np.vstack((-np.ones((1, 1)), self.layers[j - 1].output))
                 grad = self.layers[j].delta @ y_bias.T
                 if update:
-                    self.layers[j].w += self.learning_rate * grad
+                    self.layers[j].w += learning_rate * grad
                 self.layers[j].grad = grad
 
             j -= 1  # Move to the previous layer
 
-    def train(self, x, y, epochs, tol, patience=5):
+    def train(self, x, y, epochs, tol, patience=5, patience_start=1000):
         """
         Train the MLP using backpropagation.
 
@@ -74,29 +76,25 @@ class MultilayerPerceptron:
         count = 0
         errors = []
         mse = 1
+        learning_rate = self.learning_rate
         for epoch in range(epochs):
             ise = 0
             for i in range(x.shape[1]):
-                # print("Forward", x[:, i].reshape((self.p, 1)).shape)
-                # print("Backward", y[i, :].reshape((self.m, 1)).shape)
                 x_k = x[:, i].reshape((self.p, 1))
                 u_k = self.forward(x_k)
                 d_k = y[:, i].reshape((self.m, 1))
-                self.backward(x_k, d_k)
+                self.backward(x_k, d_k, learning_rate=learning_rate)
                 ise += np.sum((d_k - u_k) ** 2) / 2
             mse = ise / (2 * x.shape[1])
-            if epoch >= 1000:
+            learning_rate = max(self.learning_rate * (1 - epoch / epochs), 0.01)  # Decrease learning rate over time
+            if epoch >= patience_start:
                 if (mse > errors[-1] if errors else 0):
                     count += 1
-                    print("Error got worse. Count:", count)
                     if count > patience:
                         print("Early stopping")
                         break
-                elif count != 0:
-                    print("Error improved. Count:", count)
-                    count = 0
             errors.append(mse)
-            print(f"Epoch: {epoch}, MSE: {mse}")
+            print(f"Epoch: {epoch}, MSE: {mse}, Learning Rate: {learning_rate}")
             if abs(mse) < tol:
                 print(f"Epoch: {epoch}, MSE: {mse}")
                 print("Training completed")
@@ -104,29 +102,6 @@ class MultilayerPerceptron:
         else:
             print(f"Epoch: {epochs}")
             print("Training completed")
-
-    def mse(self, x, y):
-        """
-        Compute the Mean Squared Error (MSE) between predicted and target outputs.
-
-        Parameters:
-        x -- Input data
-        y -- Target output
-
-        Returns:
-        Mean squared error over all samples.
-        """
-        total_error = 0
-        num_samples = x.shape[1]
-        for i in range(num_samples):
-            x_k = x[:, i].reshape((self.p, 1))
-            u_k = self.forward(x_k)
-            d_k = y[:, i].reshape((self.m, 1))
-            # Instant squared error with a 1/2 factor
-            error = np.sum((d_k - u_k) ** 2) / 2
-            total_error += error
-        mse_value = total_error / (2 * num_samples)
-        return mse_value
 
     def predict(self, x):
         """
@@ -142,7 +117,7 @@ class MultilayerPerceptron:
         for i in range(x.shape[1]):
             y_k = self.forward(x[:, i].reshape((self.p, 1)))
             y_k = y_k.reshape((self.m, 1))
-            pred = np.argmax(y_k, axis=0)
+            pred = np.sign(y_k)
             # print("Pred", pred.shape, pred)
             preds.append(pred)
         preds = np.array(preds)
@@ -222,10 +197,12 @@ class Layer:
         return self.output
 
     def activation(self, u):
-        return 1 / (1 + np.exp(-u))
+        # return 1 / (1 + np.exp(-u))
+        return np.tanh(u)
 
     def activation_derivative(self):
-        return self.output * (1 - self.output)
+        # return self.output * (1 - self.output)
+        return 1 - self.output ** 2
 
     def __repr__(self):
         return str(self.w)

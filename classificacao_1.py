@@ -23,27 +23,27 @@ X_test = X_s[:, train_size:]
 
 y = y.T
 d = y
-y = one_hot_encode(y, axis=0)  # Classe 1: -1, Classe 2: 1
+# y = one_hot_encode(y, axis=0)  # Classe 1: -1, Classe 2: 1
 y_train = y[:, :train_size]
 y_test = y[:, train_size:]
 
 print("y", y[:10])
 print("d", d[:10])
 
-model = SimplePerceptron()
-model.fit(X_train, y_train, 100, 0.1, 0.1)
+# model = SimplePerceptron()
+# model.fit(X_train, y_train, 100, 0.1, 0.1)
 
-print("Exporting weights...")
-export_weights(model.w, "weights/perceptron_spiral3d.csv")
-print("Exported weights")
+# print("Exporting weights...")
+# export_weights(model.w, "weights/perceptron_spiral3d.csv")
+# print("Exported weights")
 
-result = model.predict(X_test)
+# result = model.predict(X_test)
 
-accuracy = np.sum(result == y_test) / N
-print(f"Accuracy: {accuracy * 100:.2f}%")
-print(result[:10])
+# accuracy = np.sum(result == y_test) / N
+# print(f"Accuracy: {accuracy * 100:.2f}%")
+# print(result[:10])
 
-m = 2
+m = 1
 
 epochs = [
     100,

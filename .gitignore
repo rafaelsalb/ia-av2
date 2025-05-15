@@ -11,3 +11,6 @@ wheels/
 
 # Other stuff
 *.pdf
+weights/
+evaluation/
+.ipynb_checkpoints/

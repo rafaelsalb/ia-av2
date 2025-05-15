@@ -3,10 +3,20 @@ import numpy as np
 
 
 def standardize(X: np.ndarray) -> np.ndarray:
-    mean = np.mean(X)
-    std = np.std(X)
-    X = (X - mean) / std
-    return X
+    mean = np.mean(X, axis=0)
+    std = np.std(X, axis=0)
+    X_std = (X - mean) / std
+    return X_std
+
+def normalize(X: np.ndarray) -> np.ndarray:
+    """
+    Normalize the input data X to the range [0, 1].
+    """
+    X_min = np.min(X)
+    X_max = np.max(X)
+    X_range = X_max - X_min
+    X_normalized = (X - X_min) / X_range
+    return X_normalized
 
 def export_weights(w: np.ndarray, filename: str) -> None:
     np.savetxt(filename, w, delimiter=",")
@@ -15,15 +25,21 @@ def import_weights(filename: str) -> np.ndarray:
     w = np.loadtxt(filename, delimiter=",")
     return w
 
-def export_multilayer_weights(layers: list, filename: str) -> None:
+def export_multilayer_weights(layers: list, filename: str, results: dict) -> None:
     """
     Export the weights of a multilayer perceptron to a CSV file.
     Each layer's weights are saved in a separate CSV file.
     """
-    for i, layer in enumerate(layers):
-        layer_filename = f"{filename}_layer_{i}.csv"
-        np.savetxt(layer_filename, layer.w, delimiter=",")
-        print(f"Exported weights of layer {i} to {layer_filename}")
+    with open(filename + "_hyperparameters.json", "w") as f:
+        model_hyperparameters = {
+            "p": layers[0].w.shape[0],
+            "q": [layer.w.shape[1] for layer in layers],
+            "m": layers[0].w.shape[1],
+            "learning_rate": layers[0].learning_rate,
+            "weights": [layer.w.tolist() for layer in layers],
+            "results": results
+        }
+        json.dump(model_hyperparameters, f)
 
 def import_multilayer_weights(layers: list, filename: str) -> None:
     """
@@ -35,7 +51,7 @@ def import_multilayer_weights(layers: list, filename: str) -> None:
         layer.w = np.loadtxt(layer_filename, delimiter=",")
         print(f"Imported weights of layer {i} from {layer_filename}")
 
-def export_mlp(model: object, filename: str) -> None:
+def export_mlp(model: object, filename: str, results: dict) -> None:
     """
     Export the weights of a multilayer perceptron to a CSV file.
     Each layer's weights are saved in a separate CSV file.
@@ -50,10 +66,16 @@ def export_mlp(model: object, filename: str) -> None:
         json.dump(model_hyperparameters, f)
     print(f"Exported hyperparameters to {filename}_hyperparameters.json")
 
-    for i, layer in enumerate(model.layers):
-        layer_filename = f"{filename}_layer_{i}.csv"
-        np.savetxt(layer_filename, layer.w, delimiter=",")
-        print(f"Exported weights of layer {i} to {layer_filename}")
+    with open(filename + "_results.json", "w") as f:
+        json.dump(results, f)
+    print(f"Exported results to {filename}_results.json")
+
+    with open(filename + "_weights.json", "w") as f:
+        model_weights = {
+            "weights": [layer.w.tolist() for layer in model.layers]
+        }
+        json.dump(model_weights, f)
+    print(f"Exported weights to {filename}_weights.json")
 
 def import_mlp(filename: str) -> tuple:
     """
